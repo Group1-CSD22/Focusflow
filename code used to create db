@@ -1,0 +1,173 @@
+-- =========================================================
+-- Enable UUID extension
+-- =========================================================
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- =========================================================
+-- 1. PROFILES TABLE
+-- =========================================================
+CREATE TABLE public.profiles (
+    id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+    full_name TEXT,
+    avatar_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =========================================================
+-- 2. DAILY_SUMMARIES TABLE
+-- =========================================================
+CREATE TABLE public.daily_summaries (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+
+    -- Progress & Confidence
+    tasks_completed INTEGER DEFAULT 0,
+    confidence_score INTEGER CHECK (confidence_score BETWEEN 0 AND 100),
+    productivity_score DECIMAL(5,2),
+
+    -- Mood
+    dominant_mood TEXT,
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+    UNIQUE(user_id, date)
+);
+
+-- =========================================================
+-- 3. BEHAVIORAL METRICS (Radar Chart)
+-- =========================================================
+CREATE TABLE public.behavioral_metrics (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    recorded_date DATE NOT NULL,
+
+    focus_score INTEGER CHECK (focus_score BETWEEN 0 AND 100),
+    consistency_score INTEGER CHECK (consistency_score BETWEEN 0 AND 100),
+    responsiveness_score INTEGER CHECK (responsiveness_score BETWEEN 0 AND 100),
+    engagement_score INTEGER CHECK (engagement_score BETWEEN 0 AND 100),
+
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =========================================================
+-- 4. LEARNING PROGRESS (Learning Curve)
+-- =========================================================
+CREATE TABLE public.learning_progress (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    recorded_date DATE NOT NULL,
+
+    error_rate DECIMAL(5,2),
+    proficiency_score DECIMAL(5,2),
+    total_keystrokes INTEGER,
+
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =========================================================
+-- 5. ACTIVITY HEATMAP
+-- =========================================================
+CREATE TABLE public.activity_heatmap (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    hour INTEGER CHECK (hour BETWEEN 0 AND 23),
+    intensity_score INTEGER DEFAULT 0,
+
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+
+    UNIQUE(user_id, date, hour)
+);
+
+-- =========================================================
+-- INDEXES (UI PERFORMANCE)
+-- =========================================================
+CREATE INDEX idx_daily_summaries_user_date
+    ON public.daily_summaries(user_id, date DESC);
+
+CREATE INDEX idx_behavioral_metrics_user_date
+    ON public.behavioral_metrics(user_id, recorded_date DESC);
+
+CREATE INDEX idx_learning_progress_user_date
+    ON public.learning_progress(user_id, recorded_date DESC);
+
+CREATE INDEX idx_activity_heatmap_user_date
+    ON public.activity_heatmap(user_id, date DESC);
+
+-- =========================================================
+-- AUTO UPDATED_AT TRIGGER
+-- =========================================================
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_daily_summaries_updated_at
+BEFORE UPDATE ON public.daily_summaries
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_at();
+
+-- =========================================================
+-- ROW LEVEL SECURITY (RLS)
+-- =========================================================
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_summaries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.behavioral_metrics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.learning_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.activity_heatmap ENABLE ROW LEVEL SECURITY;
+
+-- =========================================================
+-- SELECT POLICIES (Users read their own data)
+-- =========================================================
+CREATE POLICY "Users can view own profile"
+ON public.profiles
+FOR SELECT
+USING (auth.uid() = id);
+
+CREATE POLICY "Users can view own daily summaries"
+ON public.daily_summaries
+FOR SELECT
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own behavioral metrics"
+ON public.behavioral_metrics
+FOR SELECT
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own learning progress"
+ON public.learning_progress
+FOR SELECT
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own heatmap data"
+ON public.activity_heatmap
+FOR SELECT
+USING (auth.uid() = user_id);
+
+-- =========================================================
+-- INSERT POLICIES (Service Role / Backend Only)
+-- =========================================================
+CREATE POLICY "Service role insert daily summaries"
+ON public.daily_summaries
+FOR INSERT
+WITH CHECK (true);
+
+CREATE POLICY "Service role insert behavioral metrics"
+ON public.behavioral_metrics
+FOR INSERT
+WITH CHECK (true);
+
+CREATE POLICY "Service role insert learning progress"
+ON public.learning_progress
+FOR INSERT
+WITH CHECK (true);
+
+CREATE POLICY "Service role insert heatmap"
+ON public.activity_heatmap
+FOR INSERT
+WITH CHECK (true);
