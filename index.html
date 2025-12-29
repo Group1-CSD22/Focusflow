@@ -3,144 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Life Analytics Dashboard</title>
-    <!-- 1. Load Supabase JS Client -->
+    <title>Focus Flow | Analytics</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <style>
         :root {
-            /* Color Palette */
-            --bg-body: #f4f6f9;
-            --bg-card: #ffffff;
-            --bg-sidebar: #1e293b;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
-            --text-light: #e2e8f0;
-            
-            --primary: #6366f1; /* Indigo */
-            --primary-light: #e0e7ff;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            
-            --radius: 16px;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            --transition: all 0.3s ease;
+            --bg-body: #f4f6f9; --bg-card: #ffffff; --bg-sidebar: #1e293b;
+            --text-main: #1f2937; --text-muted: #6b7280; --text-light: #e2e8f0;
+            --primary: #6366f1; --success: #10b981; --radius: 16px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-
-        body {
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* --- Sidebar --- */
-        .sidebar {
-            width: 260px;
-            background-color: var(--bg-sidebar);
-            color: var(--text-light);
-            padding: 2rem;
-            display: flex;
-            flex-direction: column;
-            position: fixed;
-            height: 100vh;
-            left: 0;
-            top: 0;
-            z-index: 10;
-        }
-
-        .brand { font-size: 1.5rem; font-weight: 700; margin-bottom: 3rem; display: flex; align-items: center; gap: 10px; }
-        .brand span { color: var(--primary); }
-
-        .nav-links { list-style: none; }
-        .nav-links li { margin-bottom: 0.5rem; }
-        .nav-links a {
-            text-decoration: none;
-            color: #94a3b8;
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: var(--transition);
-        }
-        .nav-links a:hover, .nav-links a.active { background-color: rgba(255,255,255,0.1); color: white; }
-
-        .user-profile { margin-top: auto; display: flex; align-items: center; gap: 12px; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); }
-        .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
-
-        /* --- Main Content --- */
-        .main-content { margin-left: 260px; flex: 1; padding: 2rem 3rem; width: calc(100% - 260px); }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; }
-        h1 { font-size: 1.8rem; font-weight: 700; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; }
         
-        /* Loading Spinner */
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: none; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Sidebar */
+        .sidebar { width: 260px; background: var(--bg-sidebar); color: var(--text-light); padding: 2rem; position: fixed; height: 100vh; display: flex; flex-direction: column; }
+        .brand { font-size: 1.5rem; font-weight: 700; margin-bottom: 3rem; color: white; }
+        .brand span { color: var(--primary); }
+        .nav-links { list-style: none; }
+        .nav-links a { text-decoration: none; color: #94a3b8; padding: 0.75rem 1rem; border-radius: 8px; display: block; margin-bottom: 0.5rem; transition: 0.3s; }
+        .nav-links a.active { background: rgba(255,255,255,0.1); color: white; }
+        .nav-links a:hover { color: white; background: rgba(255,255,255,0.05); }
 
-        /* --- Grid --- */
+        /* Main Area */
+        .main-content { margin-left: 260px; flex: 1; padding: 2rem 3rem; width: calc(100% - 260px); }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        
+        /* Grid Layout */
         .dashboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
         .card { background: var(--bg-card); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .card-title { font-size: 1rem; font-weight: 600; color: var(--text-muted); }
-        .card-value { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.25rem; }
-
-        /* Specific Cards */
         .summary-card { grid-column: span 1; }
-        .mood-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
-        .mood-good { background: #dcfce7; color: #166534; }
-        .mood-neutral { background: #f3f4f6; color: #374151; }
+        .radar-card, .chart-card { grid-column: span 2; }
+        .heatmap-card { grid-column: span 4; }
+
+        .card-title { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .card-value { font-size: 1.8rem; font-weight: 700; margin: 0.5rem 0; }
         
         .progress-bg { background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 10px; }
-        .progress-fill { height: 100%; border-radius: 4px; transition: width 1s ease-in-out; }
+        .progress-fill { height: 100%; background: var(--primary); transition: width 1s ease; }
 
-        .radar-card { grid-column: span 2; display: flex; flex-direction: column; align-items: center; }
-        .chart-card { grid-column: span 2; }
-        .heatmap-card { grid-column: span 4; overflow: hidden; }
-
-        /* Charts */
-        .chart-container { width: 100%; height: 250px; position: relative; margin-top: 1rem; }
-        
-        .heatmap-grid {
-            display: grid;
-            grid-template-rows: repeat(7, 1fr);
-            grid-auto-flow: column;
-            gap: 6px;
-            margin-top: 1rem;
-            width: 100%;
-        }
-        .heatmap-cell { width: 100%; padding-bottom: 100%; border-radius: 4px; background: #e5e7eb; }
-        
-        .l0 { background: #f3f4f6; }
-        .l1 { background: #c7d2fe; }
-        .l2 { background: #818cf8; }
-        .l3 { background: #4f46e5; }
+        /* Heatmap Styling */
+        .heatmap-grid { display: grid; grid-template-rows: repeat(7, 12px); grid-auto-flow: column; gap: 4px; margin-top: 1rem; overflow-x: auto; padding-bottom: 10px; }
+        .heatmap-cell { width: 12px; height: 12px; border-radius: 2px; background: #e5e7eb; }
+        .l0 { background: #ebedf0; } 
+        .l1 { background: #c7d2fe; } 
+        .l2 { background: #818cf8; } 
+        .l3 { background: #4f46e5; } 
         .l4 { background: #312e81; }
 
-        @media (max-width: 1024px) { .dashboard-grid { grid-template-columns: repeat(2, 1fr); } .heatmap-card { grid-column: span 2; } }
-        @media (max-width: 768px) { .sidebar { transform: translateX(-100%); } .main-content { margin-left: 0; width: 100%; padding: 1.5rem; } .dashboard-grid { grid-template-columns: 1fr; } .radar-card, .chart-card, .heatmap-card { grid-column: span 1; } }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 50px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar -->
     <aside class="sidebar">
         <div class="brand"><span>◆</span> Focus Flow</div>
-        <ul class="nav-links">
-            <li><a href="#" class="active">Dashboard</a></li>
-            <li><a href="#">Journal</a></li>
-            <li><a href="#">Analytics</a></li>
-        </ul>
-        
-        <div class="user-profile">
-            <!-- Avatar and Name loaded via JS -->
-            <img id="user-avatar" src="https://picsum.photos/seed/user/100/100" alt="User" class="avatar">
+        <nav class="nav-links">
+            <a href="#" class="active">Dashboard</a>
+            <a href="#">Journal</a>
+            <a href="#">Settings</a>
+        </nav>
+        <div style="margin-top:auto; display:flex; align-items:center; gap:10px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.1)">
+            <img id="user-avatar" src="https://picsum.photos/seed/user/40" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
             <div>
-                <div id="user-name" style="font-weight: 600; font-size: 0.9rem;">Loading...</div>
-                <div style="font-size: 0.75rem; color: #94a3b8;">Pro Plan</div>
+                <p id="user-name" style="font-size:0.9rem; font-weight:600">Loading...</p>
+                <p style="font-size:0.7rem; color:#94a3b8">Developer Mode</p>
             </div>
         </div>
     </aside>
@@ -148,285 +75,185 @@
     <main class="main-content">
         <header>
             <div>
-                <h1>Overview</h1>
-                <p style="color: var(--text-muted)">Data synchronized with Supabase</p>
+                <h1 id="greeting">Performance Overview</h1>
+                <p id="current-date" style="color:var(--text-muted)"></p>
             </div>
-            <div style="font-size: 0.9rem; color: var(--text-muted)" id="current-date">--</div>
         </header>
 
-        <div id="loading" class="spinner"></div>
+        <div id="loading-spinner" class="spinner"></div>
 
-        <section class="dashboard-grid" id="dashboard-content" style="opacity: 0; transition: opacity 0.5s;">
+        <section class="dashboard-grid" id="dashboard-ui" style="display:none">
+            <div class="card summary-card">
+                <p class="card-title">Mood</p>
+                <div class="card-value" id="ui-mood">--</div>
+                <p style="color:var(--success); font-size:0.8rem">Today's record</p>
+            </div>
+            <div class="card summary-card">
+                <p class="card-title">Confidence</p>
+                <div class="card-value"><span id="ui-conf">0</span>%</div>
+                <div class="progress-bg"><div id="bar-conf" class="progress-fill" style="width:0%"></div></div>
+            </div>
+            <div class="card summary-card">
+                <p class="card-title">Tasks</p>
+                <div class="card-value" id="ui-tasks">0</div>
+                <p style="color:var(--text-muted); font-size:0.8rem">Completed today</p>
+            </div>
+            <div class="card summary-card">
+                <p class="card-title">Productivity</p>
+                <div class="card-value" id="ui-prod">0%</div>
+                <p style="color:var(--text-muted); font-size:0.8rem">Average Score</p>
+            </div>
 
-            <!-- 1. Daily Summaries: Mood -->
-            <article class="card summary-card">
-                <div class="card-header">
-                    <span class="card-title">Current Mood</span>
-                    <span id="mood-icon">😊</span>
-                </div>
-                <div class="card-value" id="val-mood">--</div>
-                <span class="mood-tag" id="tag-mood">Loading...</span>
-            </article>
-
-            <!-- 2. Daily Summaries: Confidence -->
-            <article class="card summary-card">
-                <div class="card-header">
-                    <span class="card-title">Confidence</span>
-                    <span style="color: var(--primary)">▲</span>
-                </div>
-                <div class="card-value"><span id="val-confidence">0</span><span style="font-size: 1rem; color: var(--text-muted)">/100</span></div>
-                <div class="progress-bg">
-                    <div id="bar-confidence" class="progress-fill" style="width: 0%; background: var(--primary);"></div>
-                </div>
-            </article>
-
-            <!-- 3. Daily Summaries: Tasks -->
-            <article class="card summary-card">
-                <div class="card-header">
-                    <span class="card-title">Tasks Done</span>
-                    <span>✅</span>
-                </div>
-                <div class="card-value" id="val-tasks">0</div>
-                <p style="font-size: 0.85rem; color: var(--text-muted);">Completed today</p>
-            </article>
-
-            <!-- 4. Daily Summaries: Productivity -->
-            <article class="card summary-card">
-                <div class="card-header">
-                    <span class="card-title">Productivity</span>
-                    <span>📈</span>
-                </div>
-                <div class="card-value" id="val-productivity">0%</div>
-                <p style="font-size: 0.85rem; color: var(--text-muted);">Daily Score</p>
-            </article>
-
-            <!-- 5. Behavioral Metrics: Radar -->
-            <article class="card radar-card">
-                <div class="card-header" style="width: 100%;">
-                    <span class="card-title">Behavioral Metrics</span>
-                </div>
-                <div class="chart-container">
-                    <!-- Dynamic SVG Radar -->
-                    <svg width="250" height="250" viewBox="0 0 200 200">
-                        <!-- Background Webs -->
-                        <polygon points="100,20 180,110 100,200 20,110" fill="none" stroke="#e5e7eb" stroke-width="1"/> <!-- Outer -->
-                        <polygon points="100,50 150,110 100,170 50,110" fill="none" stroke="#e5e7eb" stroke-width="1"/> <!-- Inner -->
-                        
-                        <!-- Data Polygon (Mapped to DB Columns) -->
-                        <!-- Order: Focus (Top), Engagement (Right), Consistency (Bottom), Responsiveness (Left) -->
-                        <polygon id="radar-poly" points="100,110 100,110 100,110 100,110" 
-                                 fill="rgba(99, 102, 241, 0.2)" stroke="var(--primary)" stroke-width="2"/>
-                        
-                        <!-- Labels -->
-                        <text x="100" y="15" text-anchor="middle" font-size="8" fill="#6b7280">Focus</text>
-                        <text x="190" y="115" text-anchor="start" font-size="8" fill="#6b7280">Engage</text>
-                        <text x="100" y="215" text-anchor="middle" font-size="8" fill="#6b7280">Consist</text>
-                        <text x="10" y="115" text-anchor="end" font-size="8" fill="#6b7280">Responsive</text>
+            <div class="card radar-card">
+                <p class="card-title">Behavioral Metrics</p>
+                <div style="display:flex; justify-content:center; padding: 1rem;">
+                    <svg width="220" height="220" viewBox="0 0 200 200">
+                        <polygon points="100,20 180,100 100,180 20,100" fill="none" stroke="#e5e7eb" stroke-dasharray="4"/>
+                        <polygon points="100,50 150,100 100,150 50,100" fill="none" stroke="#e5e7eb" stroke-dasharray="4"/>
+                        <line x1="100" y1="20" x2="100" y2="180" stroke="#e5e7eb" />
+                        <line x1="20" y1="100" x2="180" y2="100" stroke="#e5e7eb" />
+                        <polygon id="radar-poly" points="100,100 100,100 100,100 100,100" fill="rgba(99, 102, 241, 0.3)" stroke="var(--primary)" stroke-width="2"/>
+                        <text x="100" y="12" text-anchor="middle" font-size="9" fill="var(--text-muted)">Focus</text>
+                        <text x="185" y="103" font-size="9" fill="var(--text-muted)">Engagement</text>
+                        <text x="100" y="195" text-anchor="middle" font-size="9" fill="var(--text-muted)">Consistency</text>
+                        <text x="5" y="103" font-size="9" fill="var(--text-muted)">Response</text>
                     </svg>
                 </div>
-            </article>
+            </div>
 
-            <!-- 6. Learning Progress: Line Chart -->
-            <article class="card chart-card">
-                <div class="card-header">
-                    <span class="card-title">Learning Curve</span>
-                    <span style="font-size: 0.8rem; color: var(--text-muted);">Proficiency</span>
-                </div>
-                <div class="chart-container">
-                    <svg width="100%" height="100%" viewBox="0 0 400 200" preserveAspectRatio="none">
-                        <defs>
-                            <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:var(--success);stop-opacity:0.2" />
-                                <stop offset="100%" style="stop-color:var(--success);stop-opacity:0" />
-                            </linearGradient>
-                        </defs>
-                        <path id="chart-area" d="" fill="url(#grad)" />
-                        <path id="chart-line" d="" fill="none" stroke="var(--success)" stroke-width="3" stroke-linecap="round"/>
-                    </svg>
-                </div>
-            </article>
+            <div class="card chart-card">
+                <p class="card-title">Learning Curve (Proficiency)</p>
+                <svg width="100%" height="180" viewBox="0 0 400 180" preserveAspectRatio="none" style="margin-top:1rem">
+                    <path id="curve-area" fill="rgba(16, 185, 129, 0.1)" d=""></path>
+                    <path id="curve-line" fill="none" stroke="var(--success)" stroke-width="3" d=""></path>
+                </svg>
+            </div>
 
-            <!-- 7. Activity Heatmap -->
-            <article class="card heatmap-card">
-                <div class="card-header">
-                    <span class="card-title">Activity Heatmap</span>
-                </div>
-                <div class="heatmap-grid" id="heatmap-grid">
-                    <!-- Generated by JS -->
-                </div>
-            </article>
-
+            <div class="card heatmap-card">
+                <p class="card-title">Activity Heatmap (Past 90 Days)</p>
+                <div class="heatmap-grid" id="heatmap-container"></div>
+            </div>
         </section>
     </main>
 
     <script>
-        // ============================================================
-        // CONFIGURATION (REPLACE THESE)
-        // ============================================================
+        // --- CONFIGURATION ---
         const SUPABASE_URL = 'https://yarpgdrhkcelmigrnujz.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhcnBnZHJoa2NlbG1pZ3JudWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NzU2OTIsImV4cCI6MjA4MjU1MTY5Mn0.JqFR0_pne4T-sFTTxBYtJYjNucXVjBYUAWO3EICpvJU';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhcnBnZHJoa2NlbG1pZ3JudWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NzU2OTIsImV4cCI6MjA4MjU1MTY5Mn0.JqFR0_pne4T-sFTTxBYtJYjNucXVjBYUAWO3EICpvJU';
         
-        // Initialize Supabase
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // PASTE YOUR UUID FROM THE SQL EDITOR HERE:
+        const TEST_USER_ID = 'f60f7c1b-b6ce-4c3e-8630-d2d35a077891'; // Change this to the ID you copied
+        const IS_DEV_MODE = true; 
 
-        // DOM Elements
-        const loadingSpinner = document.getElementById('loading');
-        const dashboardContent = document.getElementById('dashboard-content');
-        const dateDisplay = document.getElementById('current-date');
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        dateDisplay.innerText = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-        // ============================================================
-        // DATA FETCHING & RENDERING
-        // ============================================================
-        async function loadDashboard() {
-            loadingSpinner.style.display = 'block';
-
+        async function init() {
+            document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+            
             try {
-                // 1. Check User Session
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) throw new Error("User not logged in");
+                let userId;
 
-                // 2. Parallel Fetching for Performance
-                const [profileRes, summaryRes, behaviorRes, learningRes, heatmapRes] = await Promise.all([
-                    
-                    // Profiles
-                    supabase.from('profiles').select('*').eq('id', user.id).single(),
-                    
-                    // Daily Summaries (Latest entry)
-                    supabase.from('daily_summaries').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(1),
-                    
-                    // Behavioral Metrics (Latest entry)
-                    supabase.from('behavioral_metrics').select('*').eq('user_id', user.id).order('recorded_date', { ascending: false }).limit(1),
-                    
-                    // Learning Progress (Last 7 entries)
-                    supabase.from('learning_progress').select('*').eq('user_id', user.id).order('recorded_date', { ascending: true }).limit(7),
-                    
-                    // Activity Heatmap (Last 100 days aggregated)
-                    supabase.from('activity_heatmap').select('date, intensity_score').eq('user_id', user.id).order('date', { ascending: false }).limit(100)
+                if (IS_DEV_MODE) {
+                    userId = TEST_USER_ID;
+                } else {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) throw new Error("No user found");
+                    userId = user.id;
+                }
+
+                // Parallel Fetching
+                const [profile, daily, behavior, learning, heatmap] = await Promise.all([
+                    supabase.from('profiles').select('*').eq('id', userId).single(),
+                    supabase.from('daily_summaries').select('*').eq('user_id', userId).order('date', {ascending: false}).limit(1),
+                    supabase.from('behavioral_metrics').select('*').eq('user_id', userId).order('recorded_date', {ascending: false}).limit(1),
+                    supabase.from('learning_progress').select('*').eq('user_id', userId).order('recorded_date', {ascending: true}).limit(12),
+                    supabase.from('activity_heatmap').select('date, intensity_score').eq('user_id', userId).order('date', {ascending: true})
                 ]);
 
-                // --- Update Profile UI ---
-                if (profileRes.data) {
-                    document.getElementById('user-name').innerText = profileRes.data.full_name || 'User';
-                    if (profileRes.data.avatar_url) {
-                        document.getElementById('user-avatar').src = profileRes.data.avatar_url;
-                    }
-                }
-
-                // --- Update Daily Summaries ---
-                if (summaryRes.data && summaryRes.data.length > 0) {
-                    const s = summaryRes.data[0];
-                    
-                    // Mood
-                    document.getElementById('val-mood').innerText = s.dominant_mood || 'N/A';
-                    document.getElementById('tag-mood').innerText = 'Recorded';
-                    
-                    // Confidence (0-100)
-                    const conf = s.confidence_score || 0;
-                    document.getElementById('val-confidence').innerText = conf;
-                    document.getElementById('bar-confidence').style.width = `${conf}%`;
-                    
-                    // Tasks & Productivity
-                    document.getElementById('val-tasks').innerText = s.tasks_completed || 0;
-                    document.getElementById('val-productivity').innerText = (s.productivity_score ? (s.productivity_score * 100).toFixed(0) + '%' : 'N/A');
-                }
-
-                // --- Update Radar Chart (Behavioral Metrics) ---
-                if (behaviorRes.data && behaviorRes.data.length > 0) {
-                    const b = behaviorRes.data[0];
-                    // Map 0-100 scores to radius distance (Center=100, Edge=0/200 depending on axis)
-                    // Square shape: Top(100,20), Right(180,110), Bottom(100,200), Left(20,110)
-                    
-                    const r = 80; // max radius from center (110,110)
-                    const cx = 110, cy = 110;
-                    
-                    // Helper to calculate point
-                    const getPt = (score, angleDeg) => {
-                        const angleRad = (angleDeg - 90) * (Math.PI / 180);
-                        const dist = (score / 100) * r;
-                        return `${cx + dist * Math.cos(angleRad)},${cy + dist * Math.sin(angleRad)}`;
-                    };
-
-                    const pts = [
-                        getPt(b.focus_score || 50, 0),           // Top (0 deg)
-                        getPt(b.engagement_score || 50, 90),    // Right (90 deg)
-                        getPt(b.consistency_score || 50, 180),  // Bottom (180 deg)
-                        getPt(b.responsiveness_score || 50, 270) // Left (270 deg)
-                    ];
-
-                    document.getElementById('radar-poly').setAttribute('points', pts.join(' '));
-                }
-
-                // --- Update Line Chart (Learning Progress) ---
-                if (learningRes.data && learningRes.data.length > 0) {
-                    const data = learningRes.data;
-                    const width = 400, height = 200;
-                    const stepX = width / (data.length - 1 || 1);
-                    
-                    let pathD = "";
-                    let areaD = `M0,${height} `; // Start bottom left
-
-                    data.forEach((pt, index) => {
-                        const x = index * stepX;
-                        // proficiency_score 0.0-1.0 mapped to Y
-                        const y = height - ((pt.proficiency_score || 0) * height);
-                        const command = index === 0 ? "M" : "L";
-                        pathD += `${command}${x},${y} `;
-                        areaD += `L${x},${y} `;
-                    });
-
-                    areaD += `L${width},${height} Z`; // Close area
-
-                    document.getElementById('chart-line').setAttribute('d', pathD);
-                    document.getElementById('chart-area').setAttribute('d', areaD);
-                }
-
-                // --- Update Heatmap ---
-                if (heatmapRes.data) {
-                    const grid = document.getElementById('heatmap-grid');
-                    grid.innerHTML = '';
-                    
-                    // Group intensity by date to get max per day
-                    const dailyMap = {};
-                    heatmapRes.data.forEach(row => {
-                        if (!dailyMap[row.date] || row.intensity_score > dailyMap[row.date]) {
-                            dailyMap[row.date] = row.intensity_score;
-                        }
-                    });
-
-                    // Render 100 cells (Visual representation)
-                    Object.keys(dailyMap).forEach(date => {
-                        const intensity = dailyMap[date];
-                        const div = document.createElement('div');
-                        div.className = 'heatmap-cell';
-                        
-                        // Map intensity (0-100 or arbitrary) to levels
-                        let level = 'l0';
-                        if (intensity > 80) level = 'l4';
-                        else if (intensity > 60) level = 'l3';
-                        else if (intensity > 40) level = 'l2';
-                        else if (intensity > 20) level = 'l1';
-                        
-                        div.classList.add(level);
-                        div.title = `${date}: Intensity ${intensity}`;
-                        grid.appendChild(div);
-                    });
-                }
-
-                // Reveal Dashboard
-                loadingSpinner.style.display = 'none';
-                dashboardContent.style.opacity = 1;
-
-            } catch (error) {
-                console.error("Error loading dashboard:", error.message);
-                loadingSpinner.style.display = 'none';
-                alert("Error loading data. Check console or ensure you are logged in and have replaced API keys.");
+                updateUI(profile.data, daily.data?.[0], behavior.data?.[0], learning.data, heatmap.data);
+                
+            } catch (err) {
+                console.error("Fetch Error:", err.message);
+                document.getElementById('user-name').innerText = "Data Error";
+            } finally {
+                document.getElementById('loading-spinner').style.display = 'none';
+                document.getElementById('dashboard-ui').style.display = 'grid';
             }
         }
 
-        // Run on load
-        window.addEventListener('DOMContentLoaded', loadDashboard);
+        function updateUI(profile, daily, behavior, learning, heatmap) {
+            // Profile Info
+            if (profile) {
+                document.getElementById('user-name').innerText = profile.full_name || 'Anonymous User';
+                if(profile.avatar_url) document.getElementById('user-avatar').src = profile.avatar_url;
+            }
+
+            // Summary Stats
+            if (daily) {
+                document.getElementById('ui-mood').innerText = daily.dominant_mood || 'Neutral';
+                document.getElementById('ui-conf').innerText = daily.confidence_score || 0;
+                document.getElementById('bar-conf').style.width = (daily.confidence_score || 0) + '%';
+                document.getElementById('ui-tasks').innerText = daily.tasks_completed || 0;
+                document.getElementById('ui-prod').innerText = daily.productivity_score ? Math.round(daily.productivity_score) + '%' : '0%';
+            }
+
+            // Radar Chart Logic
+            if (behavior) {
+                const cx = 100, cy = 100, r = 80;
+                const getCoord = (score, angle) => {
+                    const rad = (angle - 90) * (Math.PI / 180);
+                    const d = (Math.max(5, score) / 100) * r; // Min 5 for visibility
+                    return `${cx + d * Math.cos(rad)},${cy + d * Math.sin(rad)}`;
+                };
+                const pts = [
+                    getCoord(behavior.focus_score || 0, 0),
+                    getCoord(behavior.engagement_score || 0, 90),
+                    getCoord(behavior.consistency_score || 0, 180),
+                    getCoord(behavior.responsiveness_score || 0, 270)
+                ].join(' ');
+                document.getElementById('radar-poly').setAttribute('points', pts);
+            }
+
+            // Learning Curve Logic
+            if (learning && learning.length > 0) {
+                const w = 400, h = 180;
+                const step = w / (learning.length > 1 ? learning.length - 1 : 1);
+                
+                let d = learning.length === 1 
+                    ? `M 0,${h - (learning[0].proficiency_score * h)} L ${w},${h - (learning[0].proficiency_score * h)}`
+                    : `M 0,${h - (learning[0].proficiency_score * h)}`;
+
+                if (learning.length > 1) {
+                    learning.forEach((pt, i) => {
+                        if (i === 0) return;
+                        d += ` L ${i * step},${h - (pt.proficiency_score * h)}`;
+                    });
+                }
+                
+                document.getElementById('curve-line').setAttribute('d', d);
+                document.getElementById('curve-area').setAttribute('d', d + ` L ${w},${h} L 0,${h} Z`);
+            }
+
+            // Heatmap Logic (Auto-fill 90 days)
+            const container = document.getElementById('heatmap-container');
+            container.innerHTML = '';
+            const dataMap = {};
+            heatmap?.forEach(row => dataMap[row.date] = (dataMap[row.date] || 0) + row.intensity_score);
+
+            for (let i = 0; i < 91; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() - (90 - i));
+                const iso = date.toISOString().split('T')[0];
+                const score = dataMap[iso] || 0;
+                
+                const cell = document.createElement('div');
+                cell.className = 'heatmap-cell ' + (score > 80 ? 'l4' : score > 50 ? 'l3' : score > 20 ? 'l2' : score > 0 ? 'l1' : 'l0');
+                cell.title = `${iso}: Intensity ${score}`;
+                container.appendChild(cell);
+            }
+        }
+
+        init();
     </script>
 </body>
 </html>
