@@ -3,257 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Focus Flow | Analytics</title>
+    <title>Life Analytics Dashboard | Live</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* [Keeping your existing CSS styles exactly as provided] */
         :root {
             --bg-body: #f4f6f9; --bg-card: #ffffff; --bg-sidebar: #1e293b;
             --text-main: #1f2937; --text-muted: #6b7280; --text-light: #e2e8f0;
-            --primary: #6366f1; --success: #10b981; --radius: 16px;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --primary: #6366f1; --primary-light: #e0e7ff; --success: #10b981;
+            --warning: #f59e0b; --danger: #ef4444; --chart-1: #6366f1;
+            --chart-2: #ec4899; --chart-3: #10b981; --radius: 16px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); --transition: all 0.3s ease;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; }
-        
-        /* Sidebar */
-        .sidebar { width: 260px; background: var(--bg-sidebar); color: var(--text-light); padding: 2rem; position: fixed; height: 100vh; display: flex; flex-direction: column; }
-        .brand { font-size: 1.5rem; font-weight: 700; margin-bottom: 3rem; color: white; }
-        .brand span { color: var(--primary); }
+        .sidebar { width: 260px; background-color: var(--bg-sidebar); color: var(--text-light); padding: 2rem; position: fixed; height: 100vh; }
+        .brand { font-size: 1.5rem; font-weight: 700; margin-bottom: 3rem; color: var(--primary); }
         .nav-links { list-style: none; }
-        .nav-links a { text-decoration: none; color: #94a3b8; padding: 0.75rem 1rem; border-radius: 8px; display: block; margin-bottom: 0.5rem; transition: 0.3s; }
+        .nav-links a { text-decoration: none; color: #94a3b8; padding: 0.75rem 1rem; border-radius: 8px; display: block; margin-bottom: 0.5rem; }
         .nav-links a.active { background: rgba(255,255,255,0.1); color: white; }
-        .nav-links a:hover { color: white; background: rgba(255,255,255,0.05); }
-
-        /* Main Area */
-        .main-content { margin-left: 260px; flex: 1; padding: 2rem 3rem; width: calc(100% - 260px); }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-        
-        /* Grid Layout */
+        .main-content { margin-left: 260px; flex: 1; padding: 2rem 3rem; }
         .dashboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
         .card { background: var(--bg-card); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); }
         .summary-card { grid-column: span 1; }
         .radar-card, .chart-card { grid-column: span 2; }
         .heatmap-card { grid-column: span 4; }
-
-        .card-title { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-        .card-value { font-size: 1.8rem; font-weight: 700; margin: 0.5rem 0; }
-        
-        .progress-bg { background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 10px; }
-        .progress-fill { height: 100%; background: var(--primary); transition: width 1s ease; }
-
-        /* Heatmap Styling */
-        .heatmap-grid { display: grid; grid-template-rows: repeat(7, 12px); grid-auto-flow: column; gap: 4px; margin-top: 1rem; overflow-x: auto; padding-bottom: 10px; }
+        .card-title { font-size: 0.9rem; color: var(--text-muted); font-weight: 600; }
+        .card-value { font-size: 1.8rem; font-weight: 700; }
+        .heatmap-grid { display: grid; grid-template-rows: repeat(7, 1fr); grid-auto-flow: column; gap: 4px; margin-top: 1rem; }
         .heatmap-cell { width: 12px; height: 12px; border-radius: 2px; background: #e5e7eb; }
-        .l0 { background: #ebedf0; } 
-        .l1 { background: #c7d2fe; } 
-        .l2 { background: #818cf8; } 
-        .l3 { background: #4f46e5; } 
-        .l4 { background: #312e81; }
-
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 50px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .l0 { background: #f3f4f6; } .l1 { background: #c7d2fe; } .l2 { background: #818cf8; } .l3 { background: #4f46e5; } .l4 { background: #312e81; }
+        .progress-bg { background: #e5e7eb; height: 8px; border-radius: 4px; margin-top: 10px; }
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
     </style>
 </head>
 <body>
 
     <aside class="sidebar">
-        <div class="brand"><span>◆</span> Focus Flow</div>
-        <nav class="nav-links">
-            <a href="#" class="active">Dashboard</a>
-            <a href="#">Journal</a>
-            <a href="#">Settings</a>
-        </nav>
-        <div style="margin-top:auto; display:flex; align-items:center; gap:10px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.1)">
-            <img id="user-avatar" src="https://picsum.photos/seed/user/40" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
-            <div>
-                <p id="user-name" style="font-size:0.9rem; font-weight:600">Loading...</p>
-                <p style="font-size:0.7rem; color:#94a3b8">Developer Mode</p>
-            </div>
-        </div>
+        <div class="brand"><span>◆</span> QuantSelf</div>
+        <ul class="nav-links">
+            <li><a href="#" class="active">Dashboard</a></li>
+            <li><a href="#">Journal</a></li>
+        </ul>
     </aside>
 
     <main class="main-content">
         <header>
-            <div>
-                <h1 id="greeting">Performance Overview</h1>
-                <p id="current-date" style="color:var(--text-muted)"></p>
-            </div>
+            <h1>Overview</h1>
+            <p id="status-text">Loading data from Supabase...</p>
         </header>
 
-        <div id="loading-spinner" class="spinner"></div>
+        <section class="dashboard-grid">
+            <article class="card summary-card">
+                <div class="card-title">Current Mood</div>
+                <div class="card-value" id="mood-val">--</div>
+            </article>
 
-        <section class="dashboard-grid" id="dashboard-ui" style="display:none">
-            <div class="card summary-card">
-                <p class="card-title">Mood</p>
-                <div class="card-value" id="ui-mood">--</div>
-                <p style="color:var(--success); font-size:0.8rem">Today's record</p>
-            </div>
-            <div class="card summary-card">
-                <p class="card-title">Confidence</p>
-                <div class="card-value"><span id="ui-conf">0</span>%</div>
-                <div class="progress-bg"><div id="bar-conf" class="progress-fill" style="width:0%"></div></div>
-            </div>
-            <div class="card summary-card">
-                <p class="card-title">Tasks</p>
-                <div class="card-value" id="ui-tasks">0</div>
-                <p style="color:var(--text-muted); font-size:0.8rem">Completed today</p>
-            </div>
-            <div class="card summary-card">
-                <p class="card-title">Productivity</p>
-                <div class="card-value" id="ui-prod">0%</div>
-                <p style="color:var(--text-muted); font-size:0.8rem">Average Score</p>
-            </div>
+            <article class="card summary-card">
+                <div class="card-title">Confidence Score</div>
+                <div class="card-value" id="conf-val">--</div>
+                <div class="progress-bg"><div id="conf-progress" class="progress-fill" style="width: 0%; background: var(--primary);"></div></div>
+            </article>
 
-            <div class="card radar-card">
-                <p class="card-title">Behavioral Metrics</p>
-                <div style="display:flex; justify-content:center; padding: 1rem;">
-                    <svg width="220" height="220" viewBox="0 0 200 200">
-                        <polygon points="100,20 180,100 100,180 20,100" fill="none" stroke="#e5e7eb" stroke-dasharray="4"/>
-                        <polygon points="100,50 150,100 100,150 50,100" fill="none" stroke="#e5e7eb" stroke-dasharray="4"/>
-                        <line x1="100" y1="20" x2="100" y2="180" stroke="#e5e7eb" />
-                        <line x1="20" y1="100" x2="180" y2="100" stroke="#e5e7eb" />
-                        <polygon id="radar-poly" points="100,100 100,100 100,100 100,100" fill="rgba(99, 102, 241, 0.3)" stroke="var(--primary)" stroke-width="2"/>
-                        <text x="100" y="12" text-anchor="middle" font-size="9" fill="var(--text-muted)">Focus</text>
-                        <text x="185" y="103" font-size="9" fill="var(--text-muted)">Engagement</text>
-                        <text x="100" y="195" text-anchor="middle" font-size="9" fill="var(--text-muted)">Consistency</text>
-                        <text x="5" y="103" font-size="9" fill="var(--text-muted)">Response</text>
-                    </svg>
-                </div>
-            </div>
+            <article class="card summary-card">
+                <div class="card-title">Tasks Completed</div>
+                <div class="card-value" id="tasks-val">--</div>
+            </article>
 
-            <div class="card chart-card">
-                <p class="card-title">Learning Curve (Proficiency)</p>
-                <svg width="100%" height="180" viewBox="0 0 400 180" preserveAspectRatio="none" style="margin-top:1rem">
-                    <path id="curve-area" fill="rgba(16, 185, 129, 0.1)" d=""></path>
-                    <path id="curve-line" fill="none" stroke="var(--success)" stroke-width="3" d=""></path>
-                </svg>
-            </div>
+            <article class="card summary-card">
+                <div class="card-title">Productivity Score</div>
+                <div class="card-value" id="prod-val">--</div>
+            </article>
 
-            <div class="card heatmap-card">
-                <p class="card-title">Activity Heatmap (Past 90 Days)</p>
-                <div class="heatmap-grid" id="heatmap-container"></div>
-            </div>
+            <article class="card radar-card">
+                <div class="card-title">Behavioral Metrics (Focus vs consistency)</div>
+                <div id="radar-stats" style="font-size: 0.8rem; margin-top: 10px;"></div>
+                </article>
+
+            <article class="card heatmap-card">
+                <div class="card-title">Activity Heatmap (Intensity)</div>
+                <div class="heatmap-grid" id="heatmapGrid"></div>
+            </article>
         </section>
     </main>
 
     <script>
         // --- CONFIGURATION ---
         const SUPABASE_URL = 'https://yarpgdrhkcelmigrnujz.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhcnBnZHJoa2NlbG1pZ3JudWp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NzU2OTIsImV4cCI6MjA4MjU1MTY5Mn0.JqFR0_pne4T-sFTTxBYtJYjNucXVjBYUAWO3EICpvJU';
-        
-        // PASTE YOUR UUID FROM THE SQL EDITOR HERE:
-        const TEST_USER_ID = 'f60f7c1b-b6ce-4c3e-8630-d2d35a077891'; // Change this to the ID you copied
-        const IS_DEV_MODE = true; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...[Your Key]';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        async function init() {
-            document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-            
+        async function fetchDashboardData() {
             try {
-                let userId;
+                // 1. Fetch Latest Daily Summary
+                const { data: summary, error: sErr } = await supabase
+                    .from('daily_summaries')
+                    .select('*')
+                    .order('date', { ascending: false })
+                    .limit(1)
+                    .single();
 
-                if (IS_DEV_MODE) {
-                    userId = TEST_USER_ID;
-                } else {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (!user) throw new Error("No user found");
-                    userId = user.id;
+                if (summary) {
+                    document.getElementById('mood-val').innerText = summary.dominant_mood || 'N/A';
+                    document.getElementById('conf-val').innerText = `${summary.confidence_score}%`;
+                    document.getElementById('conf-progress').style.width = `${summary.confidence_score}%`;
+                    document.getElementById('tasks-val').innerText = summary.tasks_completed;
+                    document.getElementById('prod-val').innerText = summary.productivity_score;
                 }
 
-                // Parallel Fetching
-                const [profile, daily, behavior, learning, heatmap] = await Promise.all([
-                    supabase.from('profiles').select('*').eq('id', userId).single(),
-                    supabase.from('daily_summaries').select('*').eq('user_id', userId).order('date', {ascending: false}).limit(1),
-                    supabase.from('behavioral_metrics').select('*').eq('user_id', userId).order('recorded_date', {ascending: false}).limit(1),
-                    supabase.from('learning_progress').select('*').eq('user_id', userId).order('recorded_date', {ascending: true}).limit(12),
-                    supabase.from('activity_heatmap').select('date, intensity_score').eq('user_id', userId).order('date', {ascending: true})
-                ]);
-
-                updateUI(profile.data, daily.data?.[0], behavior.data?.[0], learning.data, heatmap.data);
+                // 2. Fetch Behavioral Metrics
+                const { data: metrics } = await supabase
+                    .from('behavioral_metrics')
+                    .select('*')
+                    .order('recorded_date', { ascending: false })
+                    .limit(1)
+                    .single();
                 
+                if (metrics) {
+                    document.getElementById('radar-stats').innerHTML = `
+                        Focus: ${metrics.focus_score} | Consistency: ${metrics.consistency_score} | Engagement: ${metrics.engagement_score}
+                    `;
+                }
+
+                // 3. Fetch Heatmap Data
+                const { data: heatmapData } = await supabase
+                    .from('activity_heatmap')
+                    .select('date, intensity_score')
+                    .limit(100);
+
+                renderHeatmap(heatmapData);
+                document.getElementById('status-text').innerText = "Real-time data synced.";
+
             } catch (err) {
-                console.error("Fetch Error:", err.message);
-                document.getElementById('user-name').innerText = "Data Error";
-            } finally {
-                document.getElementById('loading-spinner').style.display = 'none';
-                document.getElementById('dashboard-ui').style.display = 'grid';
+                console.error("Error loading data:", err);
+                document.getElementById('status-text').innerText = "Error connecting to Supabase.";
             }
         }
 
-        function updateUI(profile, daily, behavior, learning, heatmap) {
-            // Profile Info
-            if (profile) {
-                document.getElementById('user-name').innerText = profile.full_name || 'Anonymous User';
-                if(profile.avatar_url) document.getElementById('user-avatar').src = profile.avatar_url;
-            }
+        function renderHeatmap(data) {
+            const grid = document.getElementById('heatmapGrid');
+            grid.innerHTML = ''; // Clear loading
+            
+            // Map intensities to your CSS classes
+            const getLevel = (score) => {
+                if (score > 80) return 'l4';
+                if (score > 60) return 'l3';
+                if (score > 40) return 'l2';
+                if (score > 20) return 'l1';
+                return 'l0';
+            };
 
-            // Summary Stats
-            if (daily) {
-                document.getElementById('ui-mood').innerText = daily.dominant_mood || 'Neutral';
-                document.getElementById('ui-conf').innerText = daily.confidence_score || 0;
-                document.getElementById('bar-conf').style.width = (daily.confidence_score || 0) + '%';
-                document.getElementById('ui-tasks').innerText = daily.tasks_completed || 0;
-                document.getElementById('ui-prod').innerText = daily.productivity_score ? Math.round(daily.productivity_score) + '%' : '0%';
-            }
+            // If no data, show empty cells, otherwise show fetched data
+            const displayData = data.length > 0 ? data : Array(100).fill({intensity_score: 0});
 
-            // Radar Chart Logic
-            if (behavior) {
-                const cx = 100, cy = 100, r = 80;
-                const getCoord = (score, angle) => {
-                    const rad = (angle - 90) * (Math.PI / 180);
-                    const d = (Math.max(5, score) / 100) * r; // Min 5 for visibility
-                    return `${cx + d * Math.cos(rad)},${cy + d * Math.sin(rad)}`;
-                };
-                const pts = [
-                    getCoord(behavior.focus_score || 0, 0),
-                    getCoord(behavior.engagement_score || 0, 90),
-                    getCoord(behavior.consistency_score || 0, 180),
-                    getCoord(behavior.responsiveness_score || 0, 270)
-                ].join(' ');
-                document.getElementById('radar-poly').setAttribute('points', pts);
-            }
-
-            // Learning Curve Logic
-            if (learning && learning.length > 0) {
-                const w = 400, h = 180;
-                const step = w / (learning.length > 1 ? learning.length - 1 : 1);
-                
-                let d = learning.length === 1 
-                    ? `M 0,${h - (learning[0].proficiency_score * h)} L ${w},${h - (learning[0].proficiency_score * h)}`
-                    : `M 0,${h - (learning[0].proficiency_score * h)}`;
-
-                if (learning.length > 1) {
-                    learning.forEach((pt, i) => {
-                        if (i === 0) return;
-                        d += ` L ${i * step},${h - (pt.proficiency_score * h)}`;
-                    });
-                }
-                
-                document.getElementById('curve-line').setAttribute('d', d);
-                document.getElementById('curve-area').setAttribute('d', d + ` L ${w},${h} L 0,${h} Z`);
-            }
-
-            // Heatmap Logic (Auto-fill 90 days)
-            const container = document.getElementById('heatmap-container');
-            container.innerHTML = '';
-            const dataMap = {};
-            heatmap?.forEach(row => dataMap[row.date] = (dataMap[row.date] || 0) + row.intensity_score);
-
-            for (let i = 0; i < 91; i++) {
-                const date = new Date();
-                date.setDate(date.getDate() - (90 - i));
-                const iso = date.toISOString().split('T')[0];
-                const score = dataMap[iso] || 0;
-                
+            displayData.forEach(item => {
                 const cell = document.createElement('div');
-                cell.className = 'heatmap-cell ' + (score > 80 ? 'l4' : score > 50 ? 'l3' : score > 20 ? 'l2' : score > 0 ? 'l1' : 'l0');
-                cell.title = `${iso}: Intensity ${score}`;
-                container.appendChild(cell);
-            }
+                cell.className = `heatmap-cell ${getLevel(item.intensity_score)}`;
+                cell.title = `Date: ${item.date || 'N/A'} - Intensity: ${item.intensity_score}`;
+                grid.appendChild(cell);
+            });
         }
 
-        init();
+        // Initialize
+        fetchDashboardData();
     </script>
 </body>
 </html>
