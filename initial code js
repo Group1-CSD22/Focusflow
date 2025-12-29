@@ -1,0 +1,19 @@
+// Your "Initial Page" / Onboarding Screen Logic
+const saveUserProfile = async (userName) => {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    // We UPDATE instead of INSERT because the Trigger 
+    // already created the empty row for us!
+    const { error } = await supabase
+      .from('profiles')
+      .update({ 
+        full_name: userName,
+        avatar_url: 'default-url.png' // or a file upload
+      })
+      .eq('id', user.id);
+
+    if (error) console.error("Error updating profile:", error);
+    else console.log("Profile updated successfully!");
+  }
+};
